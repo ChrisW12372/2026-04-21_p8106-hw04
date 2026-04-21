@@ -20,6 +20,8 @@ library(rpart)
 library(rpart.plot)
 library(party)
 library(partykit)
+library(randomForest)
+library(ranger)
 
 set.seed(202604)
 ```
@@ -34,6 +36,8 @@ df_college <- read.csv("data/College.csv", row.names = 1) |>
 
 
 ## Part I
+
+### Fit the Model
 
 ```{r}
 set.seed(202604)
@@ -87,10 +91,62 @@ rpart.plot(tree_1se)
 I randomly split the data into a training set (80%) and a test set (20%). Using the training data, I first fit a relatively large regression tree with an initial complexity parameter of 0.005. I then examined the cp table and considered two pruning strategies: selecting the cp that minimized the cross-validation error, and selecting the cp based on the 1-SE rule. These two approaches produced trees with different levels of complexity. Since the 1-SE tree was simpler and easier to interpret, I chose it as the final regression tree. The resulting plot is shown below.  
 
 
+## Part II
 
 
+### Fit the Model
+
+```{r}
+set.seed(202604)
+ctrl <- trainControl(method = "cv", number = 10)
+rf_grid <- expand.grid(mtry = 1:(ncol(df_col_train) - 1), 
+                       splitrule = "variance", 
+                       min.node.size = 1:6)
+
+fit_rf <- train(outstate ~ ., 
+                data = df_col_train, 
+                method = "ranger", 
+                tuneGrid = rf_grid,
+                trControl = ctrl, 
+                importance = "permutation")
 
 
+```
+
+
+### Variable Importance
+
+```{r}
+set.seed(202604)
+fit_rf_final <- ranger(
+  outstate ~ .,
+  data = df_col_train,
+  mtry = fit_rf$bestTune[[1]],
+  splitrule = "variance",
+  min.node.size = fit_rf$bestTune[[3]],
+  importance = "permutation",
+  scale.permutation.importance = TRUE
+)
+
+barplot(
+  sort(ranger::importance(fit_rf_final), decreasing = FALSE),
+  las = 2,
+  horiz = TRUE,
+  cex.names = 0.7,
+  col = colorRampPalette(colors = c("cyan", "blue"))(length(ranger::importance(fit_rf_final)))
+)
+```
+
+
+### Test Error
+
+```{r}
+rf_pred <- predict(fit_rf_final, data = df_col_test)$predictions
+test_mse <- mean((rf_pred - df_col_test$outstate)^2)
+test_rmse <- sqrt(test_mse)
+test_mse
+test_rmse
+```
 
 
 
