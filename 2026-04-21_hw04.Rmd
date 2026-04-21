@@ -1,0 +1,118 @@
+---
+title: "2026-04-21_hw04"
+author: "Chris"
+date: "2026-04-21"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    number_sections: true
+    css: style.css
+---
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(party)
+library(partykit)
+
+set.seed(202604)
+```
+
+
+# Question One
+
+```{r}
+df_college <- read.csv("data/College.csv", row.names = 1) |>
+  janitor::clean_names()
+```
+
+
+## Part I
+
+```{r}
+set.seed(202604)
+data_split <- initial_split(df_college, prop = 0.8)
+
+df_col_train <- training(data_split)
+df_col_test <- testing(data_split)
+```
+
+
+```{r}
+set.seed(202604)
+tree1 <- rpart(
+  outstate ~ ., data = df_col_train,
+  control = rpart.control(cp = 0.005)
+)
+
+cpTable1 <- tree1$cptable
+print(cpTable1)
+```
+
+### xerror
+
+```{r}
+set.seed(202604)
+min_err1 <- which.min(cpTable1[, "xerror"])
+tree2 <- prune(tree1, cp = cpTable1[min_err1, "CP"])
+rpart.plot(tree2)
+```
+
+
+### 1se rule
+
+```{r}
+set.seed(202604)
+min_row <- which.min(cpTable1[, "xerror"])
+xerror_min <- cpTable1[min_row, "xerror"]
+xstd_min   <- cpTable1[min_row, "xstd"]
+
+threshold_1se <- xerror_min + xstd_min
+candidate_rows <- which(cpTable1[, "xerror"] <= threshold_1se)
+row_1se <- candidate_rows[1]
+
+cp_1se <- cpTable1[row_1se, "CP"]
+
+tree_1se <- prune(tree1, cp = cp_1se)
+
+rpart.plot(tree_1se)
+```
+
+I randomly split the data into a training set (80%) and a test set (20%). Using the training data, I first fit a relatively large regression tree with an initial complexity parameter of 0.005. I then examined the cp table and considered two pruning strategies: selecting the cp that minimized the cross-validation error, and selecting the cp based on the 1-SE rule. These two approaches produced trees with different levels of complexity. Since the 1-SE tree was simpler and easier to interpret, I chose it as the final regression tree. The resulting plot is shown below.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
