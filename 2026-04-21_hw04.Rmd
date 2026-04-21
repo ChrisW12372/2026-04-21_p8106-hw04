@@ -11,6 +11,7 @@ output:
     css: style.css
 ---
 
+The project is on GitHub: https://github.com/ChrisW12372/2026-04-21_p8106-hw04.git
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -22,6 +23,8 @@ library(party)
 library(partykit)
 library(randomForest)
 library(ranger)
+library(gbm)
+library(xgboost)
 
 set.seed(202604)
 ```
@@ -149,14 +152,72 @@ test_rmse
 ```
 
 
+* The variable importance plot from the random forest model shows that “expend” is the most important predictor of “Outstate”, followed by “room_board”. Other influential variables include “accept, apps, terminal, and grad_rate”. In contrast, variables such as “books” and “s_f_ratio” appear to contribute relatively little to prediction accuracy.  
+
+* Using the final random forest model, the test mean squared error (MSE) is 3,509,856, corresponding to a test root mean squared error (RMSE) of 1,873.461.  
+
+
+## Part III
+
+
+```{r}
+gbm_grid <- expand.grid(
+  n.trees = c(100, 200, 500, 1000, 2000, 5000),
+  interaction.depth = 1:4,
+  shrinkage = c(0.005, 0.01, 0.05),
+  n.minobsinnode = c(5, 10)
+)
+
+```
 
 
 
+```{r}
+set.seed(202604)
+
+fit_gbm <- train(
+  outstate ~ .,
+  data = df_col_train,
+  method = "gbm",
+  distribution = "gaussian",
+  trControl = ctrl,
+  tuneGrid = gbm_grid,
+  verbose = FALSE
+)
+
+ggplot(fit_gbm, highlight = TRUE)
+```
+
+```{r}
+fit_gbm$bestTune
+```
 
 
+```{r}
+gbm_imp <- summary(fit_gbm$finalModel, plotit = FALSE)
+gbm_imp
 
+barplot(
+  sort(gbm_imp$rel.inf, decreasing = FALSE),
+  names.arg = gbm_imp$var[order(gbm_imp$rel.inf)],
+  las = 2,
+  horiz = TRUE,
+  cex.names = 0.7,
+  col = colorRampPalette(colors = c("cyan", "blue"))(nrow(gbm_imp))
+)
+```
 
+### Test Error
 
+```{r}
+gbm_pred <- predict(fit_gbm, newdata = df_col_test)
+
+test_mse <- mean((gbm_pred - df_col_test$outstate)^2)
+test_rmse <- sqrt(test_mse)
+
+test_mse
+test_rmse
+```
 
 
 
