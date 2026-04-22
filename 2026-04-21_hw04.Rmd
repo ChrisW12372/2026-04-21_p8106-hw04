@@ -253,6 +253,7 @@ tree1 <- rpart(
 )
 
 plotcp(tree1)
+printcp(tree1)
 
 cpTable2 <- tree1$cptable
 cpTable2
@@ -297,21 +298,87 @@ rpart.plot(tree_1se)
 ```
 
 
+* The lowest cross-validation error was 0.1969697, which occurred at the tree with nsplit = 3. This corresponds to a tree with 4 terminal nodes. Therefore, the tree size corresponding to the lowest cross-validation error is 3 splits (or equivalently, 4 terminal nodes).  
+
+* Using the 1-SE rule, the selected tree had nsplit = 1, which corresponds to 2 terminal nodes. Therefore, the tree size chosen by the 1-SE rule is not the same as the tree size corresponding to the minimum cross-validation error. The 1-SE rule selects a smaller and simpler tree.  
+
+
+## Part II
+
+```{r}
+gbm_grid2 <- expand.grid(
+  n.trees = c(100, 200, 500, 1000, 2000),
+  interaction.depth = 1:4,
+  shrinkage = c(0.005, 0.01, 0.05),
+  n.minobsinnode = c(5, 10)
+)
+```
+
+
+```{r}
+set.seed(202604)
+
+fit_gbm2 <- train(
+  mpg_cat ~ .,
+  data = df_auto_train,
+  method = "gbm",
+  trControl = ctrl,
+  tuneGrid = gbm_grid2,
+  verbose = FALSE
+)
+```
 
 
 
+```{r}
+# best tuning parameters
+fit_gbm2$bestTune
+
+# all tuning results
+fit_gbm2$results
+
+# optional tuning plot
+plot(fit_gbm2)
+```
 
 
+```{r}
+gbm_imp <- summary(fit_gbm2$finalModel, plotit = FALSE)
+gbm_imp
+gbm_imp_sorted <- gbm_imp[order(gbm_imp$rel.inf), ]
+
+barplot(
+  gbm_imp_sorted$rel.inf,
+  names.arg = gbm_imp_sorted$var,
+  las = 2,
+  horiz = TRUE,
+  cex.names = 0.7,
+  col = colorRampPalette(c("cyan", "blue"))(nrow(gbm_imp_sorted)),
+  xlab = "Relative Influence",
+  main = "GBM Variable Importance"
+)
+```
 
 
+```{r}
+gbm_pred_class <- predict(fit_gbm2, newdata = df_auto_test)
+
+test_acc <- mean(gbm_pred_class == df_auto_test$mpg_cat)
+test_err <- mean(gbm_pred_class != df_auto_test$mpg_cat)
+
+test_acc
+test_err
+```
 
 
+```{r}
+confusionMatrix(gbm_pred_class, df_auto_test$mpg_cat)
+```
 
 
+* I fit a boosting model on the training data and evaluated its predictive performance on the test set. The test accuracy was 0.9492, corresponding to a test misclassification error of 0.0508. This indicates that the boosting model performed very well on the test data, correctly classifying about 94.9% of the observations.  
 
-
-
-
+* Based on the variable importance plot, displacement is the most important predictor of mpg_cat, followed by weight, year, and horsepower. In contrast, variables such as origin and cylinders appear to have relatively smaller contributions. Overall, the results suggest that engine size and vehicle size characteristics are the most influential factors in predicting fuel-efficiency category.  
 
 
 
