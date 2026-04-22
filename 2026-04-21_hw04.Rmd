@@ -69,6 +69,14 @@ set.seed(202604)
 min_err1 <- which.min(cpTable1[, "xerror"])
 tree2 <- prune(tree1, cp = cpTable1[min_err1, "CP"])
 rpart.plot(tree2)
+
+tree_pred <- predict(tree2, newdata = df_col_test)
+
+test_mse <- mean((tree_pred - df_col_test$outstate)^2)
+test_rmse <- sqrt(test_mse)
+
+test_mse
+test_rmse
 ```
 
 
@@ -89,6 +97,14 @@ cp_1se <- cpTable1[row_1se, "CP"]
 tree_1se <- prune(tree1, cp = cp_1se)
 
 rpart.plot(tree_1se)
+
+tree_pred <- predict(tree_1se, newdata = df_col_test)
+
+test_mse <- mean((tree_pred - df_col_test$outstate)^2)
+test_rmse <- sqrt(test_mse)
+
+test_mse
+test_rmse
 ```
 
 I randomly split the data into a training set (80%) and a test set (20%). Using the training data, I first fit a relatively large regression tree with an initial complexity parameter of 0.005. I then examined the cp table and considered two pruning strategies: selecting the cp that minimized the cross-validation error, and selecting the cp based on the 1-SE rule. These two approaches produced trees with different levels of complexity. Since the 1-SE tree was simpler and easier to interpret, I chose it as the final regression tree. The resulting plot is shown below.  
@@ -231,7 +247,7 @@ test_rmse
 set.seed(202604)
 df_auto <- read_csv("data/auto.csv") |>
   janitor::clean_names() |>
-  mutate(mpg_cat = factor(mpg_cat))
+  mutate(mpg_cat = factor(mpg_cat), origin = factor(origin))
 
 data_split_auto <- initial_split(df_auto, prop = 0.7)
 
@@ -376,10 +392,9 @@ confusionMatrix(gbm_pred_class, df_auto_test$mpg_cat)
 ```
 
 
-* I fit a boosting model on the training data and evaluated its predictive performance on the test set. The test accuracy was 0.9492, corresponding to a test misclassification error of 0.0508. This indicates that the boosting model performed very well on the test data, correctly classifying about 94.9% of the observations.  
+* I fit a boosting model on the training data and evaluated its predictive performance on the test set. The test accuracy was 0.8983, corresponding to a test misclassification error of 0.1017. This indicates that the boosting model performed very well on the test data, correctly classifying about 89.83% of the observations.  
 
 * Based on the variable importance plot, displacement is the most important predictor of mpg_cat, followed by weight, year, and horsepower. In contrast, variables such as origin and cylinders appear to have relatively smaller contributions. Overall, the results suggest that engine size and vehicle size characteristics are the most influential factors in predicting fuel-efficiency category.  
-
 
 
 
