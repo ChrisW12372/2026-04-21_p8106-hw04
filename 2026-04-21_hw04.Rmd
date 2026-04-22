@@ -220,6 +220,95 @@ test_rmse
 ```
 
 
+* The variable importance plot from the boosting model shows that expend is by far the most important predictor of outstate. The second most important variable is room_board, followed by terminal, perc_alumni, grad_rate, and apps. In contrast, variables such as books, enroll, and top25perc appear to contribute relatively little to prediction accuracy.  
+
+* Using the fitted boosting model, I predicted outstate for the test data. The resulting test mean squared error (MSE) was 3,576,395, corresponding to a test root mean squared error (RMSE) of 1,891.136. This means that the model's predictions differ from the observed out-of-state tuition by about 1,891 dollars on average in the test set.  
+
+
+# Question Two
+
+```{r}
+set.seed(202604)
+df_auto <- read_csv("data/auto.csv") |>
+  janitor::clean_names() |>
+  mutate(mpg_cat = factor(mpg_cat))
+
+data_split_auto <- initial_split(df_auto, prop = 0.7)
+
+df_auto_train <- training(data_split_auto)
+df_auto_test <- testing(data_split_auto)
+```
+
+
+
+## Part I
+
+```{r}
+set.seed(202604)
+tree1 <- rpart(
+  mpg_cat ~ .,
+  data = df_auto_train,
+  method = "class",
+  control = rpart.control(cp = 0.001)
+)
+
+plotcp(tree1)
+
+cpTable2 <- tree1$cptable
+cpTable2
+```
+
+
+```{r}
+min_row <- which.min(cpTable2[, "xerror"])
+cp_min <- cpTable2[min_row, "CP"]
+nsplit_min <- cpTable2[min_row, "nsplit"]
+
+cp_min
+nsplit_min
+cpTable2[min_row, ]
+```
+
+
+```{r}
+tree_min <- prune(tree1, cp = cp_min)
+rpart.plot(tree_min)
+```
+
+
+```{r}
+set.seed(202604)
+xerror_min <- cpTable2[min_row, "xerror"]
+xstd_min   <- cpTable2[min_row, "xstd"]
+
+threshold_1se <- xerror_min + xstd_min
+
+candidate_rows <- which(cpTable2[, "xerror"] <= threshold_1se)
+
+row_1se <- candidate_rows[1]
+cp_1se <- cpTable2[row_1se, "CP"]
+nsplit_1se <- cpTable2[row_1se, "nsplit"]
+
+cp_1se
+nsplit_1se
+
+tree_1se <- prune(tree1, cp = cp_1se)
+rpart.plot(tree_1se)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
